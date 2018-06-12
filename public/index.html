@@ -1,21 +1,142 @@
+
 <!DOCTYPE html>
 <head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+	<title>dhtmlxGantt</title>
+	<script src="codebase/dhtmlxgantt.js?v=20180322"></script>
+	<script src="codebase/ext/dhtmlxgantt_smart_rendering.js?v=20180322"></script>
+	<script src="codebase/ext/api.js"></script>
+	<script src="codebase/locale/locale_cn.js"></script>
+	<script src="codebase/ext/dhtmlxgantt_critical_path.js"></script>
+	<script src="codebase/ext/dhtmlxgantt_fullscreen.js"></script>
+	<script src="codebase/ext/dhtmlxgantt_undo.js"></script>
+	<script src="codebase/ext/dhtmlxgantt_auto_scheduling.js"></script>
+	<script src="js/ganttConfig.js"></script>
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css">
+	<link rel="stylesheet" href="codebase/dhtmlxgantt.css?v=20180322">
+	<link rel="stylesheet" href="style.css">
+	<style>
+		html, body {
+			height: 100%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+			font-family: Arial;
+		}
+	</style>
 </head>
-    <script src="./codebase/sources/dhtmlxgantt.js" type="text/javascript" charset="utf-8"></script>
-    <link rel="stylesheet" href="./codebase/dhtmlxgantt.css" type="text/css" charset="utf-8">
-    <style type="text/css">
-        html, body{ height:100%; padding:0px; margin:0px; overflow: hidden;}
-    </style>
-<body>
-    <div id="gantt_here" style='width:100%; height:100%;'></div>
-    <script type="text/javascript">
-        gantt.config.xml_date = "%Y-%m-%d %H:%i:%s";
-        gantt.init("gantt_here");
-        gantt.load("/data");
 
+<body>
+	<ul id="menu" class="menu">
+		<li><a data-action="undo"><i class="fa fa-undo"></i>撤销</a></li>
+		<li><a data-action="redo"><i class="fa fa-redo"></i>重做</a></li>
+		<li><a data-action="print"><i class="fa fa-print"></i>打印</a></li>
+		<li><a data-action="zoomIn"><i class="fa fa-plus-circle"></i>放大</a></li>
+		<li><a data-action="zoomOut"><i class="fa fa-minus-circle"></i>缩小</a></li>
+		<li><a data-action="toggleCriticalPath" id ="toggleCriticalPath"><i class="fa fa-search"></i>关键路径</a></li>
+	</ul>
+	<div id="gantt_here" style='width:100%;height: 90%;'></div>
+	<script>
+		function toggleGrid(div){
+			var flag = gantt.config.show_grid;
+			if(flag == true){
+				document.querySelector('.fa-chevron-left').style.display = 'none';
+				document.querySelector('.fa-chevron-right').style.display = 'inline-block';
+			}else{
+				document.querySelector('.fa-chevron-left').style.display = 'inline-block';
+			}
+			gantt.config.show_grid = ! gantt.config.show_grid;
+			gantt.render();
+		}
+
+		gantt.attachEvent("onTemplatesReady", function () {
+			var toggle = document.createElement("i");
+			var resizer = document.querySelector(".gantt_layout_cell.gantt_resizer.gantt_resizer_x");
+			var div = document.createElement("div");
+			div.className = 'splitter';
+			div.style.position = 'absolute';
+			div.style.top = '45%';
+			div.onmousedown = function(){
+				toggleGrid(div);
+			};
+			div.innerHTML = '<i class="fa fa-chevron-left"></i><i class="fa fa-chevron-right" style="display:none"></i>'
+			resizer.appendChild(div);
+			toggle.className = "fa fa-expand gantt-fullscreen";
+			gantt.toggleIcon = toggle;
+			gantt.$container.appendChild(toggle);
+			toggle.onclick = function () {
+				if (!gantt.getState().fullscreen) {
+					gantt.expand();
+				}
+				else {
+					gantt.collapse();
+				}
+			};
+		});
+		gantt.attachEvent("onExpand", function () {
+			var icon = gantt.toggleIcon;
+			if (icon) {
+				icon.className = icon.className.replace("fa-expand", "fa-compress");
+			}
+
+		});
+		gantt.attachEvent("onCollapse", function () {
+			var icon = gantt.toggleIcon;
+			if (icon) {
+				icon.className = icon.className.replace("fa-compress", "fa-expand");
+			}
+		});
+		
+		gantt.init("gantt_here");
+
+		gantt.load('/data')
 		var dp = new gantt.dataProcessor("/data");
-        dp.init(gantt);
-        dp.setTransactionMode("REST");
-    </script>
+		dp.init(gantt);
+		dp.setTransactionMode("REST");
+
+		var actions = {
+			redo: function(){
+				gantt.redo();
+			},
+			undo: function(){
+				gantt.undo();
+			},
+			print: function(){
+				gantt.exportToPDF();
+			},
+			zoomIn: function(){
+				if(scaleLevel != 1){
+					--scaleLevel;
+					setScaleConfig(scaleLevel);
+					gantt.render();
+				}					
+			},
+			zoomOut: function(){
+				if(scaleLevel != 7){
+					++scaleLevel;
+					setScaleConfig(scaleLevel);
+					gantt.render();
+				}					
+			},
+			toggleCriticalPath: function(){
+				gantt.config.highlight_critical_path = !gantt.config.highlight_critical_path;
+				if(gantt.config.highlight_critical_path){
+					document.getElementById('toggleCriticalPath').classList.add('active');
+				}else{
+					document.getElementById('toggleCriticalPath').classList.remove('active');
+				}
+				gantt.render();
+			}
+
+		}
+
+		var menu = document.getElementById('menu');
+		menu.onclick = function(e){
+			var li = e.target.hasAttribute('data-action') ? e.target : e.target.parentNode;
+			var action = li.getAttribute('data-action');
+			actions[action]();
+		}
+
+
+	</script>
 </body>
